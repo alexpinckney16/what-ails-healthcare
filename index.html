@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Price of the White Coat — an interactive debt model</title>
+<meta name="description" content="An interactive model of medical training debt: how family wealth at the starting line and specialty choice at the finish line shape when — and whether — a doctor gets out of debt.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f7f7f4;
+    --card: #ffffff;
+    --ink: #1c1e21;
+    --ink-2: #55585e;
+    --ink-3: #8a8d93;
+    --line: #dcdcd6;
+    --blue: #2a6fc2;
+    --green: #16855f;
+    --amber: #b07508;
+    --serif: 'IBM Plex Serif', Georgia, serif;
+    --sans: 'IBM Plex Sans', -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #17181a;
+      --card: #1f2124;
+      --ink: #eceded;
+      --ink-2: #a9acb1;
+      --ink-3: #77797e;
+      --line: #33353a;
+      --blue: #5b99e0;
+      --green: #3fae85;
+      --amber: #d99b2b;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 80px; }
+  .tri-rule { display: flex; height: 3px; margin: 0 0 2.5rem; }
+  .tri-rule span { flex: 1; }
+  .tri-rule span:nth-child(1) { background: var(--blue); }
+  .tri-rule span:nth-child(2) { background: var(--green); }
+  .tri-rule span:nth-child(3) { background: var(--amber); }
+  header { padding-top: 3.5rem; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 1rem;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 5.5vw, 44px);
+    line-height: 1.15; letter-spacing: -0.01em; margin-bottom: 1rem;
+  }
+  .dek { font-family: var(--serif); font-size: 18px; color: var(--ink-2); max-width: 62ch; margin-bottom: 2.5rem; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 22px; margin: 2.5rem 0 0.75rem; }
+  p.note { font-size: 14px; color: var(--ink-2); max-width: 68ch; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1.4rem 1.4rem 1.6rem; margin: 1.5rem 0; }
+  .panel-title { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 1rem; }
+
+  .spec-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; }
+  label { font-size: 14px; color: var(--ink-2); }
+  select {
+    font-family: var(--sans); font-size: 14px; color: var(--ink);
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 10px; cursor: pointer;
+  }
+  select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.4rem; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .stat .k { font-size: 12px; color: var(--ink-3); }
+  .stat .v { font-family: var(--mono); font-size: 19px; font-weight: 500; }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px 22px; }
+  .control.full { grid-column: 1 / -1; }
+  .control .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; gap: 10px; }
+  .control .row output { font-family: var(--mono); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  input[type=range] { width: 100%; accent-color: var(--blue); height: 22px; cursor: pointer; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 1.6rem 0 8px; font-size: 13px; color: var(--ink-2); }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .sw { width: 16px; height: 0; }
+
+  .chart-box { position: relative; width: 100%; height: 340px; }
+  @media (max-width: 560px) { .chart-box { height: 280px; } }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 1.4rem; }
+  .pcard { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .pcard h3 { font-family: var(--sans); font-weight: 500; font-size: 13px; color: var(--ink-2); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .pcard .peak-k { font-size: 12px; color: var(--ink-3); }
+  .pcard .peak-v { font-family: var(--mono); font-size: 21px; font-weight: 500; margin-bottom: 6px; }
+  .pcard .kv { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+  .pcard .kv b { font-family: var(--mono); font-weight: 500; }
+
+  footer { margin-top: 3.5rem; border-top: 1px solid var(--line); padding-top: 1.5rem; }
+  footer h2 { font-size: 16px; margin-top: 0; }
+  footer p, footer li { font-size: 13.5px; color: var(--ink-2); }
+  footer ul { padding-left: 1.2rem; margin: 0.5rem 0 1rem; }
+  footer li { margin-bottom: 4px; }
+  a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  .backlink { font-family: var(--mono); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="tri-rule" aria-hidden="true"><span></span><span></span><span></span></div>
+    <p class="eyebrow">Interactive model · companion to the essay</p>
+    <h1>The price of the white coat</h1>
+    <p class="dek">Three students walk into the same medical school, match into the same specialty, and pay the same share of their income toward loans. The only difference is what they owed at 22. This model shows what that difference costs — and when, if ever, each of them gets out.</p>
+    <p class="backlink">← <a href="https://YOUR-SUBSTACK-URL-HERE">Back to the essay</a></p>
+  </header>
+
+  <h2>Set the assumptions</h2>
+  <p class="note">All three borrow identically for medical school; loan payments are calculated as a share of estimated after-tax income. Interest never pauses — including through residency.</p>
+
+  <div class="panel">
+    <p class="panel-title">Specialty</p>
+    <div class="spec-row">
+      <select id="spec" aria-label="Specialty">
+        <option value="ortho">Orthopedic surgery</option>
+        <option value="gensurg">General surgery</option>
+        <option value="psych" selected>Psychiatry</option>
+        <option value="peds">Pediatrics</option>
+        <option value="pcp">Primary care</option>
+      </select>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Avg attending salary</div><div class="v" id="stat-salary"></div></div>
+      <div class="stat"><div class="k">Est. monthly take-home</div><div class="v" id="stat-net"></div></div>
+      <div class="stat"><div class="k">Residency length</div><div class="v" id="stat-res"></div></div>
+    </div>
+
+    <p class="panel-title">Borrowing and repayment</p>
+    <div class="controls">
+      <div class="control">
+        <div class="row"><label for="msb">Med school borrowing</label><output id="msb-out">$55K/yr</output></div>
+        <input type="range" id="msb" min="30000" max="90000" step="5000" value="55000">
+      </div>
+      <div class="control">
+        <div class="row"><label for="rate">Grad loan rate</label><output id="rate-out">8.5%</output></div>
+        <input type="range" id="rate" min="5" max="11" step="0.25" value="8.5">
+      </div>
+      <div class="control">
+        <div class="row"><label for="rsal">Residency salary (gross)</label><output id="rsal-out">$5,500/mo</output></div>
+        <input type="range" id="rsal" min="2000" max="6000" step="100" value="5500">
+      </div>
+      <div class="control full">
+        <div class="row"><label for="rpct">% of after-tax residency pay to loans</label><output id="rpct-out"></output></div>
+        <input type="range" id="rpct" min="10" max="50" step="1" value="10">
+      </div>
+      <div class="control full">
+        <div class="row"><label for="apct">% of after-tax attending pay to loans</label><output id="apct-out"></output></div>
+        <input type="range" id="apct" min="10" max="50" step="1" value="20">
+      </div>
+    </div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span><span class="sw" style="border-top:3px solid var(--blue);"></span>No undergrad debt</span>
+    <span><span class="sw" style="border-top:3px dashed var(--green);"></span>$30K undergrad debt</span>
+    <span><span class="sw" style="border-top:3px dotted var(--amber);"></span>$70K undergrad debt</span>
+  </div>
+
+  <div class="chart-box">
+    <canvas id="debtChart" role="img" aria-label="Line chart of total student debt by age for three physicians who differ only in undergraduate debt. Balances rise through medical school and residency as interest compounds, then decline during attending years; higher starting debt produces a higher peak and a later debt-free age, and at low payment percentages in lower-paid specialties some balances never reach zero by age 55.">
+      Debt balances by age for three physicians differing only in undergraduate debt at graduation.
+    </canvas>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <footer>
+    <h2>Methodology and sources</h2>
+    <p>This is a stylized model, not financial advice. Assumptions:</p>
+    <ul>
+      <li>All three personas graduate college at 22 differing only in education debt: $0; $30,000 at 6.5%; or $70,000 at 7.5% (higher rate reflecting private and Parent PLUS borrowing common among lower-wealth families).</li>
+      <li>Medical school runs ages 22–26 with equal annual borrowing (adjustable) at the blended grad loan rate (adjustable; the 2025–26 federal rates were 7.94% unsubsidized and 8.94% Grad PLUS).</li>
+      <li>Residency begins at 26 with length set by specialty. Loan interest accrues throughout with no pause; payments are the chosen share of after-tax residency pay (a 22% effective tax rate is assumed for residents).</li>
+      <li>Attending pay begins when residency ends. Effective tax rates by specialty income: 34% (pediatrics, primary care), 36% (psychiatry), 38% (general surgery), 40% (orthopedics) — approximate single-filer federal + FICA + average state.</li>
+      <li>Payments are applied to the higher-rate loans first. Interest compounds monthly throughout, a simplification that slightly overstates balances versus federal simple-interest accrual before capitalization; the six-month grace period and income-driven-repayment interest subsidies are ignored.</li>
+      <li>Salary figures are rounded blends of 2025 physician compensation surveys (AMA, Doximity, Medscape): orthopedic surgery ~$580K, general surgery ~$450K, psychiatry ~$340K, primary care ~$275K, pediatrics ~$260K. Median PGY-1 stipend was $66,986 (AAMC, 2025, preliminary).</li>
+      <li>Debt statistics informing defaults: AAMC Education Debt Fact Card (Class of 2025) and AAMC Graduation Questionnaire.</li>
+    </ul>
+    <p>Built for What Ails Healthcare. <a href="https://YOUR-SUBSTACK-URL-HERE">Read the full essay →</a></p>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function(){
+  var mq = matchMedia('(prefers-color-scheme: dark)');
+
+  function theme(){
+    var s = getComputedStyle(document.documentElement);
+    return {
+      blue: s.getPropertyValue('--blue').trim(),
+      green: s.getPropertyValue('--green').trim(),
+      amber: s.getPropertyValue('--amber').trim(),
+      ink2: s.getPropertyValue('--ink-2').trim(),
+      ink3: s.getPropertyValue('--ink-3').trim(),
+      line: s.getPropertyValue('--line').trim(),
+      band1: mq.matches ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.035)',
+      band2: mq.matches ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'
+    };
+  }
+  var T = theme();
+
+  var specs = {
+    ortho:   {label:'Orthopedic surgery', resYears:5, salary:580000, tax:0.40},
+    gensurg: {label:'General surgery',    resYears:5, salary:450000, tax:0.38},
+    psych:   {label:'Psychiatry',         resYears:4, salary:340000, tax:0.36},
+    peds:    {label:'Pediatrics',         resYears:3, salary:260000, tax:0.34},
+    pcp:     {label:'Primary care',       resYears:3, salary:275000, tax:0.34}
+  };
+  var RES_TAX = 0.22;
+
+  function personas(){
+    return [
+      {name:'No undergrad debt',   u:0,     ur:0.065, color:T.blue,  dash:[]},
+      {name:'$30K undergrad debt', u:30000, ur:0.065, color:T.green, dash:[6,4]},
+      {name:'$70K undergrad debt', u:70000, ur:0.075, color:T.amber, dash:[2,3]}
+    ];
+  }
+
+  var resYears = 4;
+
+  function simulate(p, msPerYear, msRate, resPay, attPay){
+    var balU = p.u, balM = 0, totalInt = 0, peak = 0, freeAge = null;
+    var pts = [];
+    var attStart = 26 + resYears;
+    var maxM = (55-22)*12;
+    for(var m=0; m<=maxM; m++){
+      var age = 22 + m/12;
+      if(m===0||m===12||m===24||m===36) balM += msPerYear;
+      var iU = balU*p.ur/12, iM = balM*msRate/12;
+      balU += iU; balM += iM; totalInt += iU + iM;
+      var pay = 0;
+      if(age >= 26 && age < attStart) pay = resPay;
+      else if(age >= attStart) pay = attPay;
+      if(pay > 0){
+        var toM = Math.min(pay, balM); balM -= toM;
+        var toU = Math.min(pay - toM, balU); balU -= toU;
+      }
+      var bal = balU + balM;
+      peak = Math.max(peak, bal);
+      pts.push({x: Math.round(age*100)/100, y: Math.round(bal)});
+      if(bal <= 0.5 && freeAge === null){ freeAge = age; break; }
+    }
+    return {pts:pts, peak:peak, totalInt:totalInt, freeAge:freeAge};
+  }
+
+  var bands = {
+    id:'bands',
+    beforeDatasetsDraw: function(c){
+      var a = c.chartArea; if(!a) return;
+      var x = c.scales.x, ctx = c.ctx;
+      var attStart = 26 + resYears;
+      ctx.save();
+      var spans = [[22,26,'med school',T.band1],[26,attStart,'residency',T.band2]];
+      spans.forEach(function(s){
+        var x1 = x.getPixelForValue(s[0]), x2 = x.getPixelForValue(s[1]);
+        ctx.fillStyle = s[3];
+        ctx.fillRect(x1, a.top, x2-x1, a.bottom-a.top);
+        ctx.fillStyle = T.ink3; ctx.font = '11px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+        ctx.fillText(s[2], (x1+x2)/2, a.top+13);
+      });
+      var x3 = x.getPixelForValue(attStart), x4 = x.getPixelForValue(x.max);
+      ctx.fillStyle = T.ink3; ctx.textAlign = 'center';
+      ctx.fillText('attending', (x3+x4)/2, a.top+13);
+      ctx.restore();
+    }
+  };
+
+  var chart = null;
+  function fmt(n){ return '$' + Math.round(n).toLocaleString('en-US'); }
+  function fmtAge(a){ return a === null ? 'not by 55' : String(Math.round(a*10)/10); }
+  function $(id){ return document.getElementById(id); }
+
+  function update(){
+    var spec = specs[$('spec').value];
+    resYears = spec.resYears;
+    var msb = +$('msb').value;
+    var rate = +$('rate').value/100;
+    var rsal = +$('rsal').value;
+    var rpct = +$('rpct').value;
+    var apct = +$('apct').value;
+
+    var resNet = rsal * (1 - RES_TAX);
+    var attNet = spec.salary * (1 - spec.tax) / 12;
+    var resPay = Math.round(resNet * rpct/100);
+    var attPay = Math.round(attNet * apct/100);
+
+    $('stat-salary').textContent = '$' + Math.round(spec.salary/1000) + 'K/yr';
+    $('stat-net').textContent = fmt(attNet) + '/mo';
+    $('stat-res').textContent = spec.resYears + ' years';
+    $('msb-out').textContent = '$' + Math.round(msb/1000) + 'K/yr';
+    $('rate-out').textContent = (Math.round(rate*10000)/100) + '%';
+    $('rsal-out').textContent = '$' + rsal.toLocaleString('en-US') + '/mo';
+    $('rpct-out').textContent = rpct + '% \u2192 $' + resPay.toLocaleString('en-US') + '/mo';
+    $('apct-out').textContent = apct + '% \u2192 $' + attPay.toLocaleString('en-US') + '/mo';
+
+    var P = personas();
+    var results = P.map(function(p){ return simulate(p, msb, rate, resPay, attPay); });
+    var maxAge = 42;
+    results.forEach(function(r){ if(r.freeAge) maxAge = Math.max(maxAge, Math.ceil(r.freeAge)+1); else maxAge = 50; });
+    maxAge = Math.min(maxAge, 50);
+
+    var datasets = P.map(function(p,i){
+      return {
+        label: p.name, data: results[i].pts,
+        borderColor: p.color, borderWidth: 2, borderDash: p.dash,
+        pointRadius: 0, pointHoverRadius: 4, fill: false, tension: 0
+      };
+    });
+
+    if(chart){
+      chart.data.datasets = datasets;
+      chart.options.scales.x.max = maxAge;
+      chart.update('none');
+    } else {
+      Chart.defaults.font.family = '"IBM Plex Sans", sans-serif';
+      chart = new Chart($('debtChart'), {
+        type: 'line',
+        data: {datasets: datasets},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: {mode:'index', intersect:false},
+          plugins: {
+            legend: {display:false},
+            tooltip: {
+              callbacks: {
+                title: function(items){ return 'Age ' + Math.round(items[0].parsed.x*10)/10; },
+                label: function(c){ return ' ' + c.dataset.label + ': ' + fmt(c.parsed.y); }
+              }
+            }
+          },
+          scales: {
+            x: {type:'linear', min:22, max:maxAge, ticks:{stepSize:2, color:T.ink3}, grid:{display:false}, title:{display:true, text:'Age', color:T.ink3, font:{size:11}}},
+            y: {min:0, ticks:{color:T.ink3, callback:function(v){ return '$'+Math.round(v/1000)+'K'; }}, grid:{color:T.line}}
+          }
+        },
+        plugins:[bands]
+      });
+    }
+
+    $('cards').innerHTML = P.map(function(p,i){
+      var r = results[i];
+      return '<div class="pcard">' +
+        '<h3><span class="dot" style="background:'+p.color+';"></span>'+p.name+'</h3>' +
+        '<div class="peak-k">Peak debt</div>' +
+        '<div class="peak-v">'+fmt(r.peak)+'</div>' +
+        '<div class="kv"><span>Debt-free at</span><b>'+fmtAge(r.freeAge)+'</b></div>' +
+        '<div class="kv"><span>Total interest</span><b>'+fmt(r.totalInt)+'</b></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  ['msb','rate','rsal','rpct','apct'].forEach(function(id){ $(id).addEventListener('input', update); });
+  $('spec').addEventListener('change', update);
+
+  mq.addEventListener('change', function(){
+    T = theme();
+    if(chart){
+      chart.options.scales.x.ticks.color = T.ink3;
+      chart.options.scales.x.title.color = T.ink3;
+      chart.options.scales.y.ticks.color = T.ink3;
+      chart.options.scales.y.grid.color = T.line;
+    }
+    update();
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>
